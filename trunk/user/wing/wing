@@ -1,5 +1,5 @@
 #!/bin/sh
-PATH=$(cd "${0%/*}"; pwd):$PATH
+#PATH=$(cd "${0%/*}"; pwd):$PATH
 
 THREAD_COUNT=4
 REDIR_PORT=1088
@@ -80,11 +80,7 @@ start()
 	# dns2tcp
 	# TODO: Keep dns2tcp or dns-forwarder only
 	# TODO: Modify dnsmasq to support HTTP/TCP DNS
-if [ "$USE_DNSFORWARDER" == "1" ]; then
-	nohup dns-forwarder -p 5353 -s $REMOTE_DNS &> /tmp/dns-forwarder.log &
-else
 	nohup dns2tcp -L 0.0.0.0#5353 -R $REMOTE_DNS#53 &> /tmp/dns2tcp.log &
-fi
 
 	# dnsmasq
 	# TODO: Modify dnsmasq to support domain-list-file based server config
