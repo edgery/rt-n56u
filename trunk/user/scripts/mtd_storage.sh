@@ -262,8 +262,8 @@ func_fill()
 #modprobe ip_set_list_set
 #modprobe xt_set
 
-# wing
-#wing <HOST> <PORT> <PASS>
+#wing <HOST> 443 <PASS>
+#wing 192.168.1.9 1080
 
 #drop caches
 sync && echo 3 > /proc/sys/vm/drop_caches
@@ -296,6 +296,9 @@ EOF
 
 ### Custom user script
 ### Called after internal iptables reconfig (firewall update)
+
+#wing restart <HOST> 443 <PASS>
+#wing restart 192.168.1.9 1080
 
 EOF
 		chmod 755 "$script_postf"
