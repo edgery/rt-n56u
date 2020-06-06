@@ -324,7 +324,7 @@ static void parse_command_args(int argc, char *argv[]) {
     }
 
     if (strlen(opt_listen_addr) == 0) {
-        strcpy(opt_listen_addr, "0.0.0.0#5354");
+        strcpy(opt_listen_addr, "0.0.0.0#5353");
         //printf("[parse_command_args] missing option: '-L'\n");
         //goto PRINT_HELP_AND_EXIT;
     }
