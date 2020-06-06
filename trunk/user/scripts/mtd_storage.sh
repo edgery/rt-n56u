@@ -278,7 +278,7 @@ sync && echo 3 > /proc/sys/vm/drop_caches
 #mdev -s
 
 # HomeAssistant asuswrt device tracker
-#/bin/ln -s /tmp/dnsmasq.leases /var/lib/misc/dnsmasq.leases
+#ln -s /tmp/dnsmasq.leases /var/lib/misc/dnsmasq.leases
 
 # ShadowSocks server
 #iptables -A INPUT -p tcp --dport 8989 -j ACCEPT
@@ -310,8 +310,7 @@ EOF
 ### Custom user script
 ### Called after internal iptables reconfig (firewall update)
 
-#wing restart <HOST> 443 <PASS>
-#wing restart 192.168.1.9 1080
+wing resume
 
 EOF
 		chmod 755 "$script_postf"

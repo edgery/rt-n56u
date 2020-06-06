@@ -36,22 +36,28 @@ check()
 	fi
 }
 
+redir()
+{
+	iptables -t nat $1 OUTPUT -p tcp -m set --match-set gfwlist dst -j REDIRECT --to-port $REDIR_PORT 2> /dev/null
+	iptables -t nat $1 PREROUTING -p tcp -m set --match-set gfwlist dst -j REDIRECT --to-port $REDIR_PORT 2> /dev/null
+}
+
 start()
 {
 	# prepage
-	[ -z $2 ] && usage
+	[ -z $3 ] && usage
 	check
 
 	# trojan
-	if [ -z $3 ]; then
+	if [ -z $4 ]; then
 		RUN_MODE="Remote Socks"
-		SOCKS_HOST=$1
-		SOCKS_PORT=$2
+		SOCKS_HOST=$2
+		SOCKS_PORT=$3
 	else
-		TROJAN_HOST=$1
-		TROJAN_PORT=$2
-		TROJAN_PASS=$3
-		if [ -z $4 ]; then RUN_TYPE=nat; else RUN_TYPE=$4; fi
+		TROJAN_HOST=$2
+		TROJAN_PORT=$3
+		TROJAN_PASS=$4
+		if [ -z $4 ]; then RUN_TYPE=nat; else RUN_TYPE=$5; fi
 		if [ "$RUN_TYPE" = "nat" ]; then
 			RUN_MODE="Local Transparent"
 			LOCAL_PORT=$REDIR_PORT
@@ -62,24 +68,41 @@ start()
 			SOCKS_HOST=127.0.0.1
 			SOCKS_PORT=$LOCAL_PORT
 		fi
-		echo "{\"run_type\":\"$RUN_TYPE\",\"local_addr\":\"0.0.0.0\",\"local_port\":$LOCAL_PORT,\"remote_addr\":\"$TROJAN_HOST\",\"remote_port\":$TROJAN_PORT,\"password\":[\"$TROJAN_PASS\"],\"ssl\":{\"verify\":false}}" > /tmp/trojan.conf
-		nohup trojan -c /tmp/trojan.conf &> /tmp/trojan.log &
+		echo "{\"run_type\":\"$RUN_TYPE\",\"local_addr\":\"0.0.0.0\",\"local_port\":$LOCAL_PORT,\"remote_addr\":\"$TROJAN_HOST\",\"remote_port\":$TROJAN_PORT,\"password\":[\"$TROJAN_PASS\"],\"log_level\":$1,\"ssl\":{\"verify\":false}}" > /tmp/trojan.conf
+		if [ $1 -ge 5 ]; then
+			nohup trojan -c /tmp/trojan.conf > /dev/null 2>&1&
+		else
+			nohup trojan -c /tmp/trojan.conf &> /tmp/trojan.log &
+		fi
 	fi
 
 	# ipt2socks
 	if [ ! -z $SOCKS_HOST ]; then
-		nohup ipt2socks -s $SOCKS_HOST -p $SOCKS_PORT -b 0.0.0.0 -l $REDIR_PORT -j $THREAD_COUNT -T -4 -R &> /tmp/ipt2socks.log &
+		if [ $1 -ge 5 ]; then
+			nohup ipt2socks -s $SOCKS_HOST -p $SOCKS_PORT -b 0.0.0.0 -l $REDIR_PORT -j $THREAD_COUNT -T -4 -R > /dev/null 2>&1&
+		elif [ $1 -ge 2 ]; then
+			nohup ipt2socks -s $SOCKS_HOST -p $SOCKS_PORT -b 0.0.0.0 -l $REDIR_PORT -j $THREAD_COUNT -T -4 -R &> /tmp/ipt2socks.log &
+		else
+			nohup ipt2socks -s $SOCKS_HOST -p $SOCKS_PORT -b 0.0.0.0 -l $REDIR_PORT -j $THREAD_COUNT -T -4 -R -v &> /tmp/ipt2socks.log &
+		fi
 	fi
 
 	# iptables
 	ipset create gfwlist iphash
 	ipset add gfwlist $REMOTE_DNS
-	iptables -t nat -A OUTPUT -p tcp -m set --match-set gfwlist dst -j REDIRECT --to-port $REDIR_PORT
-	iptables -t nat -A PREROUTING -p tcp -m set --match-set gfwlist dst -j REDIRECT --to-port $REDIR_PORT
+	redir -A
 
 	# dns2tcp
 	# TODO: Modify dnsmasq to support HTTP/TCP DNS
-	nohup dns2tcp -L 0.0.0.0#54 -R $REMOTE_DNS#53 &> /tmp/dns2tcp.log &
+	if [ $1 -ge 5 ]; then
+		nohup dns2tcp -L 0.0.0.0#54 -R $REMOTE_DNS#53 > /dev/null 2>&1&
+	elif [ $1 -ge 3 ]; then
+		nohup dns2tcp -L 0.0.0.0#54 -R $REMOTE_DNS#53 &> /tmp/dns2tcp.log &
+	elif [ $1 -ge 2 ]; then
+		nohup dns2tcp -L 0.0.0.0#54 -R $REMOTE_DNS#53 -q &> /tmp/dns2tcp.log &
+	else
+		nohup dns2tcp -L 0.0.0.0#54 -R $REMOTE_DNS#53 -q -v &> /tmp/dns2tcp.log &
+	fi
 
 	# dnsmasq
 	# TODO: Modify dnsmasq to support domain-list-file based server config
@@ -94,8 +117,7 @@ start()
 
 stop()
 {
-	iptables -t nat -D OUTPUT -p tcp -m set --match-set gfwlist dst -j REDIRECT --to-port $REDIR_PORT 2> /dev/null
-	iptables -t nat -D PREROUTING -p tcp -m set --match-set gfwlist dst -j REDIRECT --to-port $REDIR_PORT 2> /dev/null
+	redir -D
 	ipset destroy gfwlist 2> /dev/null
 
 	[ -f /tmp/dns-forwarder.log ] && rm /tmp/dns-forwarder.log && killall dns-forwarder
@@ -106,9 +128,9 @@ stop()
 
 status()
 {
-	[ ${1::1} = t ] && [ -f /tmp/trojan.log ] && tail -f /tmp/trojan.log && return
-	[ ${1::4} = dns2 ] && [ -f /tmp/dns2tcp.log ] && tail -f /tmp/dns2tcp.log && return
-	[ ${1::4} = ipt2 ] && [ -f /tmp/ipt2socks.log ] && tail -f /tmp/ipt2socks.log && return
+	if [ ${1::1} = t ]; then [ -f /tmp/trojan.log ] && tail -f /tmp/trojan.log; return; fi
+	if [ ${1::4} = dns2 ]; then [ -f /tmp/dns2tcp.log ] && tail -f /tmp/dns2tcp.log; return; fi
+	if [ ${1::4} = ipt2 ]; then [ -f /tmp/ipt2socks.log ] && tail -f /tmp/ipt2socks.log; return; fi
 
 	([ -z $1 ] || [ ${1::3} = ipt ]) && iptables -t nat -L PREROUTING && iptables -t nat -L OUTPUT
 	([ -z $1 ] || [ ${1::3} = ips ]) && echo && ipset -L gfwlist | more
@@ -122,7 +144,7 @@ status()
 
 case "$1" in
 	start)
-		start $2 $3 $4 $5
+		start 2 $2 $3 $4 $5
 		;;
 	stop)
 		stop
@@ -133,16 +155,33 @@ case "$1" in
 		;;
 	restart)
 		stop
-		start $2 $3 $4 $5
+		start 2 $2 $3 $4 $5
 		;;
-	status)
+	pause)
+		redir -D
+		;;
+	resume)
+		ipset test gfwlist $REMOTE_DNS
+		if [ $? = 0 ]; then
+			redr -A
+		else
+			echo "Nothing to resume"
+		fi
+		;;
+	s|status)
 		status $2
 		;;
 	update)
 		update
 		;;
+	-v0|-v1|-v2|-v3|-v4|-v5)
+		start ${1:2} $2 $3 $4 $5
+		;;
+	-v)
+		start 1 $2 $3 $4 $5
+		;;
 	*)
-		start $1 $2 $3 $5
+		start 5 $1 $2 $3 $4
 		;;
 esac
 
