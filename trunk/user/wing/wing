@@ -78,9 +78,8 @@ start()
 	iptables -t nat -A PREROUTING -p tcp -m set --match-set gfwlist dst -j REDIRECT --to-port $REDIR_PORT
 
 	# dns2tcp
-	# TODO: Keep dns2tcp or dns-forwarder only
 	# TODO: Modify dnsmasq to support HTTP/TCP DNS
-	nohup dns2tcp -L 0.0.0.0#5353 -R $REMOTE_DNS#53 &> /tmp/dns2tcp.log &
+	nohup dns2tcp -L 0.0.0.0#54 -R $REMOTE_DNS#53 &> /tmp/dns2tcp.log &
 
 	# dnsmasq
 	# TODO: Modify dnsmasq to support domain-list-file based server config
