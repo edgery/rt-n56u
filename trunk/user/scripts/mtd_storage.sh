@@ -510,11 +510,11 @@ EOF
 	if [ -f /usr/bin/wing ]; then
 		cat >> "$user_dnsmasq_conf" <<EOF
 ### Force to gfwlist
-#server=/mit.edu/127.0.0.1#5353
+#server=/mit.edu/127.0.0.1#54
 #ipset=/mit.edu/gfwlist
-#server=/openwrt.org/lede-project.org/127.0.0.1#5353
+#server=/openwrt.org/lede-project.org/127.0.0.1#54
 #ipset=/openwrt.org/lede-project.org/gfwlist
-#server=/github.com/github.io/githubusercontent.com/127.0.0.1#5353
+#server=/github.com/github.io/githubusercontent.com/127.0.0.1#54
 #ipset=/github.com/github.io/githubusercontent.com/gfwlist
 
 EOF
