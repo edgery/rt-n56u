@@ -262,6 +262,9 @@ func_fill()
 #modprobe ip_set_list_set
 #modprobe xt_set
 
+#wing <HOST> 443 <PASS>
+#wing 192.168.1.9 1080
+
 #drop caches
 sync && echo 3 > /proc/sys/vm/drop_caches
 
@@ -306,6 +309,9 @@ EOF
 
 ### Custom user script
 ### Called after internal iptables reconfig (firewall update)
+
+#wing restart <HOST> 443 <PASS>
+#wing restart 192.168.1.9 1080
 
 EOF
 		chmod 755 "$script_postf"
@@ -497,6 +503,19 @@ EOF
 		cat >> "$user_dnsmasq_conf" <<EOF
 ### vlmcsd related
 srv-host=_vlmcs._tcp,my.router,1688,0,100
+
+EOF
+	fi
+
+	if [ -f /usr/bin/wing ]; then
+		cat >> "$user_dnsmasq_conf" <<EOF
+### Force to gfwlist
+#server=/mit.edu/127.0.0.1#5353
+#ipset=/mit.edu/gfwlist
+#server=/openwrt.org/lede-project.org/127.0.0.1#5353
+#ipset=/openwrt.org/lede-project.org/gfwlist
+#server=/github.com/github.io/githubusercontent.com/127.0.0.1#5353
+#ipset=/github.com/github.io/githubusercontent.com/gfwlist
 
 EOF
 	fi
