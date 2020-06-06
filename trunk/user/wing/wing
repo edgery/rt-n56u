@@ -161,8 +161,9 @@ case "$1" in
 		redir -D
 		;;
 	resume)
-		ipset test gfwlist $REMOTE_DNS
+		ipset test gfwlist $REMOTE_DNS > /dev/null 2&>1
 		if [ $? = 0 ]; then
+			redr -D
 			redr -A
 		else
 			echo "Nothing to resume"
