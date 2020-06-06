@@ -57,7 +57,7 @@ start()
 		TROJAN_HOST=$2
 		TROJAN_PORT=$3
 		TROJAN_PASS=$4
-		if [ -z $4 ]; then RUN_TYPE=nat; else RUN_TYPE=$5; fi
+		if [ -z $5 ]; then RUN_TYPE=nat; else RUN_TYPE=$5; fi
 		if [ "$RUN_TYPE" = "nat" ]; then
 			RUN_MODE="Local Transparent"
 			LOCAL_PORT=$REDIR_PORT
